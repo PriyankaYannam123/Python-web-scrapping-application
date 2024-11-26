@@ -1,0 +1,40 @@
+import requests
+from bs4 import BeautifulSoup
+import mysql.connector
+
+# Setup MySQL connection
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="password",
+    database="product_prices"
+)
+cursor = db.cursor()
+
+# Create table for storing scraped product prices
+cursor.execute("CREATE TABLE IF NOT EXISTS prices (product_name VARCHAR(255), price DECIMAL(10, 2))")
+
+# Function to scrape data from a website
+def scrape_product_prices(url):
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Example: Find product name and price (Adjust based on actual HTML structure)
+    product_name = soup.find('h1', {'class': 'product-title'}).text
+    price = soup.find('span', {'class': 'price'}).text.strip('$')
+    
+    return product_name, float(price)
+
+# Scrape data and store it in the database
+def store_data(product_name, price):
+    cursor.execute("INSERT INTO prices (product_name, price) VALUES (%s, %s)", (product_name, price))
+    db.commit()
+
+# Example URL (change to real e-commerce URL)
+url = "https://www.example.com/product123"
+product_name, price = scrape_product_prices(url)
+store_data(product_name, price)
+
+print(f"Scraped and stored: {product_name} at ${price}")
+db.close()
